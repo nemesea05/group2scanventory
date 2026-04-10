@@ -13,33 +13,28 @@ dependencies:
 
   cupertino_icons: ^1.0.8
 
-  # --- ADDED DEPENDENCIES ---
-  
-  # For Barcode Scanning via Camera 
+  # Barcode Scanning via Camera 
   mobile_scanner: ^5.2.1
 
-  # For picking images (Item pictures) 
+  # Picking images
   image_picker: ^1.1.2
 
-  # For local data storage (Inventory list)
+  # Local data storage
   sqflite: ^2.3.3+1
   path: ^1.9.0
 
-  # For optional Cloud Backup 
+  # Optional Cloud Backup 
   googleapis: ^13.2.0
   google_sign_in: ^6.2.1
   http: ^1.2.1
-  # --------------------------
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  flutter_lints: ^3.0.0 # Updated to match standard project lints
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
 
-  # Ensure you create an assets/ folder in your project root for logos/images
   assets:
-    - assets/images/
+    - assets/images/scaventory-logo.png

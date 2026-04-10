@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'login_screen.dart'; // Import to navigate back to login
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -17,16 +18,16 @@ class ProfileScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // User Profile Card [cite: 3, 22]
             _buildUserCard(),
             const SizedBox(height: 24),
-            
-            // Statistics Section [cite: 4]
             _buildStatsSection(),
             const SizedBox(height: 24),
-            
-            // Category Breakdown [cite: 13]
             _buildCategoryBreakdown(),
+            const SizedBox(height: 32), // Space before logout
+            
+            // --- NEW LOGOUT SECTION ---
+            _buildAccountActions(context),
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -35,7 +36,7 @@ class ProfileScreen extends StatelessWidget {
 
   Widget _buildUserCard() {
     return InkWell(
-      onTap: () => print("Open User Settings"), // Placeholder for [cite: 22]
+      onTap: () => print("Open User Settings"),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -46,20 +47,56 @@ class ProfileScreen extends StatelessWidget {
           children: [
             const CircleAvatar(
               radius: 30,
-              child: Text("IM"), // 
+              backgroundColor: Colors.blueAccent,
+              child: Text("AD", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(width: 16),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Inventory Manager", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                Text("inventory@company.com", style: TextStyle(color: Colors.grey[600])),
-                const Chip(label: Text("Admin", style: TextStyle(fontSize: 12))),
+                const Text("System Admin", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                Text("admin@scanventory.com", style: TextStyle(color: Colors.grey[600])),
+                const Chip(
+                  label: Text("Administrator", style: TextStyle(fontSize: 10, color: Colors.white)),
+                  backgroundColor: Colors.black,
+                  visualDensity: VisualDensity.compact,
+                ),
               ],
             )
           ],
         ),
       ),
+    );
+  }
+
+  // New Helper Method for the Logout Button
+  Widget _buildAccountActions(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Account Actions", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              // Clears all previous routes so user can't press "back" to return to app
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                (route) => false,
+              );
+            },
+            icon: const Icon(Icons.logout, color: Colors.red),
+            label: const Text("Logout Session", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              side: const BorderSide(color: Colors.redAccent),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -91,22 +128,22 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _buildCategoryBreakdown() {
-     return Container(
-       width: double.infinity,
-       padding: const EdgeInsets.all(16),
-       decoration: BoxDecoration(
-          color: Colors.grey[50],
-          borderRadius: BorderRadius.circular(15),
-       ),
-       child: Column(
-         crossAxisAlignment: CrossAxisAlignment.start,
-         children: [
-           const Text("Category Breakdown", style: TextStyle(fontWeight: FontWeight.bold)),
-           const SizedBox(height: 12),
-           _statRow("Sauce", "2"),
-           _statRow("Seasoning", "1"),
-         ],
-       ),
-     );
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Category Breakdown", style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          _statRow("Sauce", "2"),
+          _statRow("Seasoning", "1"),
+        ],
+      ),
+    );
   }
 }
