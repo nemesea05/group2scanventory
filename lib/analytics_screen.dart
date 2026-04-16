@@ -124,7 +124,6 @@ class AnalyticsScreen extends StatelessWidget {
                   onTap: () async {
                     try {
                       await ReportService().exportInventoryReport();
-
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -136,6 +135,28 @@ class AnalyticsScreen extends StatelessWidget {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Failed to export report: $e'),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                _buildActionTile(
+                  Icons.file_download_outlined,
+                  "Export Activity Logs",
+                  onTap: () async {
+                    try {
+                      await ReportService().exportActivityLogsReport();
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Activity logs report exported successfully.'),
+                        ),
+                      );
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to export activity logs: $e'),
                         ),
                       );
                     }

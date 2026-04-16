@@ -45,6 +45,81 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
   }
 
+  Future<void> _addCategoryToFirestore(String categoryName) async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    final existing = await FirebaseFirestore.instance
+        .collection('categories')
+        .where('name', isEqualTo: categoryName)
+        .limit(1)
+        .get();
+
+    if (existing.docs.isNotEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Category already exists.')),
+      );
+      return;
+    }
+
+    await FirebaseFirestore.instance.collection('categories').add({
+      'name': categoryName,
+      'createdAt': FieldValue.serverTimestamp(),
+      'createdByUid': user?.uid ?? '',
+      'createdByEmail': user?.email ?? '',
+      'createdByName': user?.displayName ?? '',
+    });
+
+    if (!mounted) return;
+    setState(() {
+      _selectedCategory = categoryName;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Category added successfully.')),
+    );
+  }
+
+  Future<void> _showAddCategoryDialog() async {
+    final TextEditingController categoryController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Add New Category"),
+          content: TextField(
+            controller: categoryController,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r"[A-Za-z0-9\s'().,-]")),
+            ],
+            decoration: const InputDecoration(
+              hintText: "Enter category name",
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newCategory = categoryController.text.trim();
+
+                if (newCategory.isEmpty) return;
+
+                Navigator.pop(context);
+                await _addCategoryToFirestore(newCategory);
+              },
+              child: const Text("Add"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   bool _validateInputs() {
     final String name = _nameController.text.trim();
     final String barcode = _barcodeController.text.trim();
@@ -181,82 +256,107 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionHeader(),
-            const SizedBox(height: 20),
-            _buildLabel("Item Name *"),
-            _buildTextField(
-              _nameController,
-              "Enter item name",
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r"[A-Za-z0-9\s'().,-]")),
-              ],
-            ),
-            _buildLabel("Barcode"),
-            Row(
+        child: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('categories')
+              .orderBy('name')
+              .snapshots(),
+          builder: (context, snapshot) {
+            final categoryDocs = snapshot.data?.docs ?? [];
+            final categories = categoryDocs
+                .map((doc) =>
+                    (doc.data() as Map<String, dynamic>)['name'].toString())
+                .toList();
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: _buildTextField(
-                    _barcodeController,
-                    "Enter or scan barcode",
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  ),
+                _buildSectionHeader(),
+                const SizedBox(height: 20),
+                _buildLabel("Item Name *"),
+                _buildTextField(
+                  _nameController,
+                  "Enter item name",
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r"[A-Za-z0-9\s'().,-]"),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                _buildScannerButton(),
-              ],
-            ),
-            _buildLabel("Category *"),
-            _buildDropdown(),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildLabel("Quantity *"),
-                      _buildTextField(
-                        _qtyController,
-                        "0",
+                _buildLabel("Barcode"),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildTextField(
+                        _barcodeController,
+                        "Enter or scan barcode",
                         keyboardType: TextInputType.number,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildLabel("Unit Price *"),
-                      _buildTextField(
-                        _priceController,
-                        "0.00",
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                          FilteringTextInputFormatter.digitsOnly,
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 10),
+                    _buildScannerButton(),
+                  ],
                 ),
+                _buildLabel("Category *"),
+                _buildDropdown(categories),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildLabel("Quantity *"),
+                          _buildTextField(
+                            _qtyController,
+                            "0",
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildLabel("Unit Price *"),
+                          _buildTextField(
+                            _priceController,
+                            "0.00",
+                            keyboardType:
+                                const TextInputType.numberWithOptions(decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r'^\d*\.?\d{0,2}'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                _buildLabel("Supplier"),
+                _buildTextField(
+                  _supplierController,
+                  "Enter supplier name",
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r"[A-Za-z0-9\s'().,-]"),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 30),
+                _buildSubmitButton(),
               ],
-            ),
-            _buildLabel("Supplier"),
-            _buildTextField(
-              _supplierController,
-              "Enter supplier name",
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r"[A-Za-z0-9\s'().,-]")),
-              ],
-            ),
-            const SizedBox(height: 30),
-            _buildSubmitButton(),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -326,7 +426,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildDropdown() {
+  Widget _buildDropdown(List<String> categories) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
@@ -338,16 +438,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
           value: _selectedCategory,
           isExpanded: true,
           hint: const Text("Select category"),
-          items: ["Sauce", "Seasoning", "Canned Goods"].map((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
+          items: [
+            ...categories.map((value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(value),
+              );
+            }),
+            const DropdownMenuItem<String>(
+              value: "ADD_NEW",
+              child: Text("+ Add New Category"),
+            ),
+          ],
           onChanged: (value) {
-            setState(() {
-              _selectedCategory = value;
-            });
+            if (value == "ADD_NEW") {
+              _showAddCategoryDialog();
+            } else {
+              setState(() {
+                _selectedCategory = value;
+              });
+            }
           },
         ),
       ),

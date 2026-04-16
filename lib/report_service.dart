@@ -20,21 +20,18 @@ class ReportService {
     }
   }
 
-  String _formatAction(String action) {
-    switch (action) {
-      case 'stock_in':
-        return 'Stock In';
-      case 'stock_out':
-        return 'Stock Out';
-      case 'edit_quantity':
-        return 'Edit Quantity';
-      case 'edit_item':
-        return 'Edit Item';
-      case 'delete':
-        return 'Delete Item';
-      default:
-        return 'No Activity';
-    }
+  String _formatActor(String? name, String? email) {
+    final safeName = (name ?? '').trim();
+    final safeEmail = (email ?? '').trim();
+
+    if (safeName.isNotEmpty) return safeName;
+    if (safeEmail.isNotEmpty) return safeEmail;
+    return 'Unknown Admin';
+  }
+
+  String _formatTimestamp(Timestamp? timestamp) {
+    if (timestamp == null) return 'N/A';
+    return timestamp.toDate().toString();
   }
 
   Future<void> exportInventoryReport() async {
@@ -42,23 +39,6 @@ class ReportService {
         .collection('inventory')
         .orderBy('createdAt', descending: true)
         .get();
-
-    final logsSnapshot = await FirebaseFirestore.instance
-        .collection('inventory_logs')
-        .orderBy('timestamp', descending: true)
-        .get();
-
-    final Map<String, String> latestActivityByItem = {};
-
-    for (final doc in logsSnapshot.docs) {
-      final data = doc.data();
-      final String itemName = (data['itemName'] ?? '').toString();
-      final String action = (data['action'] ?? '').toString();
-
-      if (itemName.isNotEmpty && !latestActivityByItem.containsKey(itemName)) {
-        latestActivityByItem[itemName] = _formatAction(action);
-      }
-    }
 
     final List<List<dynamic>> rows = [];
 
@@ -71,7 +51,11 @@ class ReportService {
       'Supplier',
       'Status',
       'Created At',
-      'Last Activity',
+      'Created By',
+      'Created By Email',
+      'Last Updated By',
+      'Last Updated By Email',
+      'Last Updated At',
     ]);
 
     for (final doc in inventorySnapshot.docs) {
@@ -83,13 +67,17 @@ class ReportService {
       final int quantity = (data['quantity'] ?? 0) as int;
       final double unitPrice = (data['unitPrice'] ?? 0).toDouble();
       final String supplier = (data['supplier'] ?? '').toString();
-      final Timestamp? createdAtTimestamp = data['createdAt'] as Timestamp?;
-      final String createdAt = createdAtTimestamp != null
-          ? createdAtTimestamp.toDate().toString()
-          : '';
 
-      final String lastActivity =
-          latestActivityByItem[name] ?? 'No Activity';
+      final Timestamp? createdAtTimestamp = data['createdAt'] as Timestamp?;
+      final Timestamp? lastUpdatedAtTimestamp =
+          data['lastUpdatedAt'] as Timestamp?;
+
+      final String createdByName = (data['createdByName'] ?? '').toString();
+      final String createdByEmail = (data['createdByEmail'] ?? '').toString();
+      final String lastUpdatedByName =
+          (data['lastUpdatedByName'] ?? '').toString();
+      final String lastUpdatedByEmail =
+          (data['lastUpdatedByEmail'] ?? '').toString();
 
       rows.add([
         name,
@@ -99,8 +87,12 @@ class ReportService {
         unitPrice.toStringAsFixed(2),
         supplier.isEmpty ? 'N/A' : supplier,
         _getStockStatus(quantity),
-        createdAt,
-        lastActivity,
+        _formatTimestamp(createdAtTimestamp),
+        _formatActor(createdByName, createdByEmail),
+        createdByEmail.isEmpty ? 'N/A' : createdByEmail,
+        _formatActor(lastUpdatedByName, lastUpdatedByEmail),
+        lastUpdatedByEmail.isEmpty ? 'N/A' : lastUpdatedByEmail,
+        _formatTimestamp(lastUpdatedAtTimestamp),
       ]);
     }
 
@@ -124,6 +116,67 @@ class ReportService {
         files: [XFile(path)],
         text: 'Inventory Report',
         subject: 'Inventory Report',
+      ),
+    );
+  }
+
+  Future<void> exportActivityLogsReport() async {
+    final logsSnapshot = await FirebaseFirestore.instance
+        .collection('inventory_logs')
+        .orderBy('timestamp', descending: true)
+        .get();
+
+    final List<List<dynamic>> rows = [];
+
+    rows.add([
+      'Item Name',
+      'Action',
+      'Quantity Changed',
+      'Performed By',
+      'Email',
+      'Timestamp',
+    ]);
+
+    for (final doc in logsSnapshot.docs) {
+      final data = doc.data();
+
+      final String itemName = (data['itemName'] ?? '').toString();
+      final String action = (data['action'] ?? '').toString();
+      final int quantityChanged = (data['quantityChanged'] ?? 0) as int;
+      final String userName = (data['userDisplayName'] ?? '').toString();
+      final String userEmail = (data['userEmail'] ?? '').toString();
+      final Timestamp? timestamp = data['timestamp'] as Timestamp?;
+
+      rows.add([
+        itemName,
+        action,
+        quantityChanged,
+        userName.isEmpty ? 'Unknown Admin' : userName,
+        userEmail.isEmpty ? 'N/A' : userEmail,
+        timestamp != null ? timestamp.toDate().toString() : 'N/A',
+      ]);
+    }
+
+    final String csvData = const CsvEncoder().convert(rows);
+    final String fileName =
+        'activity_logs_${DateTime.now().toIso8601String().replaceAll(':', '-')}.csv';
+
+    if (kIsWeb) {
+      downloadCsvFile(csvData, fileName);
+      return;
+    }
+
+    final Directory directory = await getApplicationDocumentsDirectory();
+    final String path = '${directory.path}/$fileName';
+
+    final File file = File(path);
+    await file.writeAsString(csvData);
+
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(path)],
+        text: 'Activity Logs Report',
+        subject: 'Activity Logs Report',
       ),
     );
   }

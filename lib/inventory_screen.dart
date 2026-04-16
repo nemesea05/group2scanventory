@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 
 enum StockStatus { inStock, lowStock, outOfStock }
 
@@ -17,13 +18,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   String _selectedCategory = 'All';
   String _selectedStatus = 'All';
-
-  final List<String> _categories = [
-    'All',
-    'Sauce',
-    'Seasoning',
-    'Canned Goods',
-  ];
 
   final List<String> _statuses = [
     'All',
@@ -63,6 +57,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
       case StockStatus.outOfStock:
         return 'Out of Stock';
     }
+  }
+
+  String _formatActor(String? name, String? email) {
+    final safeName = (name ?? '').trim();
+    final safeEmail = (email ?? '').trim();
+
+    if (safeName.isNotEmpty) return safeName;
+    if (safeEmail.isNotEmpty) return safeEmail;
+    return 'Unknown Admin';
+  }
+
+  String _formatTimestamp(Timestamp? timestamp) {
+    if (timestamp == null) return 'N/A';
+    return DateFormat('MMM dd, yyyy • hh:mm a').format(timestamp.toDate());
   }
 
   Future<void> _logAction({
@@ -239,9 +247,21 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final TextEditingController supplierController =
         TextEditingController(text: currentSupplier);
 
-    String selectedCategory = _editCategories.contains(currentCategory)
-        ? currentCategory
-        : _editCategories.first;
+    String selectedCategory = currentCategory;
+
+    final categoriesSnapshot = await FirebaseFirestore.instance
+        .collection('categories')
+        .orderBy('name')
+        .get();
+
+    final List<String> dynamicCategories = categoriesSnapshot.docs
+        .map((doc) => (doc.data())['name'].toString())
+        .toList();
+
+    if (!dynamicCategories.contains(selectedCategory) &&
+        dynamicCategories.isNotEmpty) {
+      selectedCategory = dynamicCategories.first;
+    }
 
     await showDialog(
       context: context,
@@ -257,7 +277,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     TextField(
                       controller: nameController,
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r"[A-Za-z0-9\s'().,-]")),
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r"[A-Za-z0-9\s'().,-]"),
+                        ),
                       ],
                       decoration: const InputDecoration(
                         labelText: 'Item Name',
@@ -276,12 +298,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: selectedCategory,
+                      value: dynamicCategories.isEmpty ? null : selectedCategory,
                       decoration: const InputDecoration(
                         labelText: 'Category',
                         border: OutlineInputBorder(),
                       ),
-                      items: _editCategories.map((category) {
+                      items: dynamicCategories.map((category) {
                         return DropdownMenuItem<String>(
                           value: category,
                           child: Text(category),
@@ -298,9 +320,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: priceController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d*\.?\d{0,2}'),
+                        ),
                       ],
                       decoration: const InputDecoration(
                         labelText: 'Unit Price',
@@ -311,7 +337,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     TextField(
                       controller: supplierController,
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r"[A-Za-z0-9\s'().,-]")),
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r"[A-Za-z0-9\s'().,-]"),
+                        ),
                       ],
                       decoration: const InputDecoration(
                         labelText: 'Supplier',
@@ -347,7 +375,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       return;
                     }
 
-                    if (newBarcode.isNotEmpty && !_barcodeRegex.hasMatch(newBarcode)) {
+                    if (newBarcode.isNotEmpty &&
+                        !_barcodeRegex.hasMatch(newBarcode)) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Barcode must contain numbers only.'),
@@ -365,7 +394,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       return;
                     }
 
-                    if (newSupplier.isNotEmpty && !_supplierRegex.hasMatch(newSupplier)) {
+                    if (newSupplier.isNotEmpty &&
+                        !_supplierRegex.hasMatch(newSupplier)) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text(
@@ -495,150 +525,183 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          "Inventory",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                hintText: "Search items, barcode, or supplier...",
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: Colors.grey[100],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('categories')
+          .orderBy('name')
+          .snapshots(),
+      builder: (context, categorySnapshot) {
+        final dynamicCategories = [
+          'All',
+          ...?categorySnapshot.data?.docs.map(
+            (doc) => (doc.data() as Map<String, dynamic>)['name'].toString(),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildDropdown(
-                    value: _selectedCategory,
-                    items: _categories,
-                    hint: 'Category',
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedCategory = value!;
-                      });
-                    },
+        ];
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text(
+              "Inventory",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            centerTitle: true,
+          ),
+          body: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    hintText: "Search items, barcode, or supplier...",
+                    prefixIcon: const Icon(Icons.search),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildDropdown(
-                    value: _selectedStatus,
-                    items: _statuses,
-                    hint: 'Status',
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedStatus = value!;
-                      });
-                    },
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildDropdown(
+                        value: _selectedCategory,
+                        items: dynamicCategories,
+                        hint: 'Category',
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedCategory = value!;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildDropdown(
+                        value: _selectedStatus,
+                        items: _statuses,
+                        hint: 'Status',
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedStatus = value!;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: _clearFilters,
+                    icon: const Icon(Icons.clear),
+                    label: const Text('Clear Filters'),
                   ),
                 ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: _clearFilters,
-                icon: const Icon(Icons.clear),
-                label: const Text('Clear Filters'),
               ),
-            ),
-          ),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('inventory')
-                  .orderBy('createdAt', descending: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('inventory')
+                      .orderBy('createdAt', descending: true)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Text('Error: ${snapshot.error}'),
-                  );
-                }
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text('Error: ${snapshot.error}'),
+                      );
+                    }
 
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'No inventory items yet.',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  );
-                }
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'No inventory items yet.',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      );
+                    }
 
-                final docs = snapshot.data!.docs.where((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  return _matchesFilters(data);
-                }).toList();
+                    final docs = snapshot.data!.docs.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      return _matchesFilters(data);
+                    }).toList();
 
-                if (docs.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'No matching items found.',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  );
-                }
+                    if (docs.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'No matching items found.',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      );
+                    }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    final doc = docs[index];
-                    final data = doc.data() as Map<String, dynamic>;
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: docs.length,
+                      itemBuilder: (context, index) {
+                        final doc = docs[index];
+                        final data = doc.data() as Map<String, dynamic>;
 
-                    final String docId = doc.id;
-                    final String name = data['name'] ?? 'Unnamed Item';
-                    final String barcode = data['barcode'] ?? '';
-                    final String category = data['category'] ?? 'Uncategorized';
-                    final int quantity = (data['quantity'] ?? 0) as int;
-                    final double price = (data['unitPrice'] ?? 0).toDouble();
-                    final String supplier = data['supplier'] ?? '';
+                        final String docId = doc.id;
+                        final String name = data['name'] ?? 'Unnamed Item';
+                        final String barcode = data['barcode'] ?? '';
+                        final String category =
+                            data['category'] ?? 'Uncategorized';
+                        final int quantity = (data['quantity'] ?? 0) as int;
+                        final double price =
+                            (data['unitPrice'] ?? 0).toDouble();
+                        final String supplier = data['supplier'] ?? '';
 
-                    final StockStatus status = _getStockStatus(quantity);
+                        final String createdByName =
+                            data['createdByName'] ?? '';
+                        final String createdByEmail =
+                            data['createdByEmail'] ?? '';
+                        final String lastUpdatedByName =
+                            data['lastUpdatedByName'] ?? '';
+                        final String lastUpdatedByEmail =
+                            data['lastUpdatedByEmail'] ?? '';
+                        final Timestamp? lastUpdatedAt =
+                            data['lastUpdatedAt'] as Timestamp?;
 
-                    return _buildInventoryCard(
-                      docId: docId,
-                      name: name,
-                      barcode: barcode.isEmpty ? 'No barcode' : barcode,
-                      quantity: quantity,
-                      price: price,
-                      category: category,
-                      supplier: supplier,
-                      status: status,
+                        final StockStatus status = _getStockStatus(quantity);
+
+                        return _buildInventoryCard(
+                          docId: docId,
+                          name: name,
+                          barcode: barcode.isEmpty ? 'No barcode' : barcode,
+                          quantity: quantity,
+                          price: price,
+                          category: category,
+                          supplier: supplier,
+                          createdBy:
+                              _formatActor(createdByName, createdByEmail),
+                          lastUpdatedBy:
+                              _formatActor(lastUpdatedByName, lastUpdatedByEmail),
+                          lastUpdatedAt: _formatTimestamp(lastUpdatedAt),
+                          status: status,
+                        );
+                      },
                     );
                   },
-                );
-              },
-            ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -656,7 +719,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: value,
+          value: items.contains(value) ? value : items.first,
           isExpanded: true,
           hint: Text(hint),
           items: items.map((item) {
@@ -679,6 +742,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
     required double price,
     required String category,
     required String supplier,
+    required String createdBy,
+    required String lastUpdatedBy,
+    required String lastUpdatedAt,
     required StockStatus status,
   }) {
     Color statusColor;
@@ -821,6 +887,34 @@ class _InventoryScreenState extends State<InventoryScreen> {
             Text(
               'Supplier: ${supplier.isEmpty ? 'N/A' : supplier}',
               style: TextStyle(color: Colors.grey[700], fontSize: 12),
+            ),
+            const SizedBox(height: 10),
+            const Divider(),
+            const SizedBox(height: 4),
+            Text(
+              'Created By: $createdBy',
+              style: TextStyle(
+                color: Colors.grey[800],
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Last Updated By: $lastUpdatedBy',
+              style: TextStyle(
+                color: Colors.grey[800],
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Last Updated At: $lastUpdatedAt',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+              ),
             ),
           ],
         ),
