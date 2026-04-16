@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'firebase_options.dart';
 
-// Import your screens
-import 'splash_screen.dart'; // Added the Splash Screen
 import 'inventory_screen.dart';
 import 'register_screen.dart';
 import 'analytics_screen.dart';
 import 'profile_screen.dart';
 import 'login_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const Group2InventoryApp());
 }
 
@@ -24,8 +29,33 @@ class Group2InventoryApp extends StatelessWidget {
         useMaterial3: true,
         colorSchemeSeed: Colors.blueAccent,
       ),
-      // The app now starts with the Splash Screen
-      home: const SplashScreen(),
+      home: const AuthGate(),
+    );
+  }
+}
+
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        if (snapshot.hasData) {
+          return const MainNavigationHolder();
+        }
+
+        return const LoginScreen();
+      },
     );
   }
 }
@@ -40,12 +70,11 @@ class MainNavigationHolder extends StatefulWidget {
 class _MainNavigationHolderState extends State<MainNavigationHolder> {
   int _selectedIndex = 0;
 
-  // Pages controlled by the BottomNavigationBar
-  final List<Widget> _pages = [
-    const InventoryScreen(),
-    const RegisterScreen(),
-    const AnalyticsScreen(),
-    const ProfileScreen(),
+  final List<Widget> _pages = const [
+    InventoryScreen(),
+    RegisterScreen(),
+    AnalyticsScreen(),
+    ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -57,7 +86,6 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // IndexedStack preserves the state of each page when switching tabs
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,
@@ -67,27 +95,27 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         selectedLabelStyle: const TextStyle(
-          fontWeight: FontWeight.bold, 
-          fontSize: 12
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
         ),
         selectedItemColor: Colors.blueAccent,
         unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.list_alt), 
-            label: 'Inventory'
+            icon: Icon(Icons.list_alt),
+            label: 'Inventory',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.add_box_outlined), 
-            label: 'Register'
+            icon: Icon(Icons.add_box_outlined),
+            label: 'Register',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.analytics_outlined), 
-            label: 'Analytics'
+            icon: Icon(Icons.analytics_outlined),
+            label: 'Analytics',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline), 
-            label: 'Profile'
+            icon: Icon(Icons.person_outline),
+            label: 'Profile',
           ),
         ],
       ),
