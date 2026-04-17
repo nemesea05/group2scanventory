@@ -178,7 +178,7 @@ class AnalyticsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
           ),
         ],
@@ -239,7 +239,7 @@ class AnalyticsScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.blueGrey[50]?.withOpacity(0.5),
+        color: Colors.blueGrey[50]?.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(15),
       ),
       child: Column(

@@ -26,12 +26,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     'Out of Stock',
   ];
 
-  final List<String> _editCategories = [
-    'Sauce',
-    'Seasoning',
-    'Canned Goods',
-  ];
-
   final RegExp _nameRegex = RegExp(r"^[A-Za-z0-9\s'().,-]+$");
   final RegExp _supplierRegex = RegExp(r"^[A-Za-z0-9\s'().,-]*$");
   final RegExp _wholeNumberRegex = RegExp(r'^\d+$');
@@ -183,7 +177,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 } else if (actionType == 'Edit Quantity') {
                   newQuantity = enteredQty;
                 }
-
+                final messenger = ScaffoldMessenger.of(context);
+                final navigator = Navigator.of(context);
+                
                 try {
                   await FirebaseFirestore.instance
                       .collection('inventory')
@@ -203,10 +199,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     quantityChanged: enteredQty,
                   );
 
-                  if (!mounted) return;
-                  Navigator.pop(context);
+                  navigator.pop();
 
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     SnackBar(
                       content: Text(
                         '$itemName updated successfully. New quantity: $newQuantity',
@@ -214,8 +209,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     ),
                   );
                 } catch (e) {
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     SnackBar(
                       content: Text('Failed to update item: $e'),
                     ),
@@ -263,11 +257,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
       selectedCategory = dynamicCategories.first;
     }
 
+    if (!mounted) return;
+
     await showDialog(
       context: context,
-      builder: (context) {
+      builder: (BuildContext dialogContext) {
         return StatefulBuilder(
-          builder: (context, setDialogState) {
+          builder: (BuildContext stateContext, setDialogState) {
             return AlertDialog(
               title: const Text('Edit Item'),
               content: SingleChildScrollView(
@@ -298,7 +294,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: dynamicCategories.isEmpty ? null : selectedCategory,
+                      initialValue: dynamicCategories.isEmpty ? null : selectedCategory,
                       decoration: const InputDecoration(
                         labelText: 'Category',
                         border: OutlineInputBorder(),
@@ -428,17 +424,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         action: 'edit_item',
                       );
 
-                      if (!mounted) return;
-                      Navigator.pop(context);
+                      if (!dialogContext.mounted) return;
+                      Navigator.pop(dialogContext);
 
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
                         const SnackBar(
                           content: Text('Item details updated successfully.'),
                         ),
                       );
                     } catch (e) {
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      if (!dialogContext.mounted) return;
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
                         SnackBar(
                           content: Text('Failed to update item: $e'),
                         ),
@@ -857,7 +853,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
               margin: const EdgeInsets.only(top: 6),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
+                color: statusColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
