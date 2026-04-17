@@ -113,54 +113,37 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final String title = _isLogin ? "Admin Portal Login" : "Create Account";
     final String buttonLabel = _isLogin ? "LOGIN" : "REGISTER";
     final String switchLabel = _isLogin
         ? "Don't have an account? Register"
         : "Already have an account? Login";
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFF0B466E),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(32.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.blueAccent.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.lock_person_rounded,
-                    size: 80,
-                    color: Colors.blueAccent,
-                  ),
+                Image.asset(
+                  'assets/images/scanventory_stroke.png',
+                  width: 300,
+                  fit: BoxFit.contain,
                 ),
-                const SizedBox(height: 24),
-                const Text(
-                  "ScanVentory",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 0),
 
-                if (!_isLogin) ...[
-                  TextField(
-                    controller: _nameController,
+                // Use Transform.translate to move this entire block along the Y-axis
+                // Change the second number (-30) to move it up (-) or down (+)
+                Transform.translate(
+                  offset: const Offset(0, -35),
+                  child: Column(
+                    children: [
+                      if (!_isLogin) ...[
+                        TextField(
+                          controller: _nameController,
                     decoration: InputDecoration(
                       labelText: "Full Name",
                       prefixIcon: const Icon(Icons.badge_outlined),
@@ -225,10 +208,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _handleAuth,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
+                      backgroundColor: const Color(0xFFF5680E),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       elevation: 0,
                     ),
@@ -246,6 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
+                              fontFamily: 'Montserrat',
                             ),
                           ),
                   ),
@@ -262,14 +246,21 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                   child: Text(
                     switchLabel,
-                    style: const TextStyle(color: Colors.blueAccent),
+                    style: const TextStyle(
+                      color: Color(0xFFF5680E),
+                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.normal,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-        ),
+        ],
       ),
+    ),
+  ),
+),
     );
   }
 }

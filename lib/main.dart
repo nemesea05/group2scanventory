@@ -23,7 +23,7 @@ class Group2InventoryApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ScanVentory',
+      title: 'Scanventory',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -98,8 +98,12 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
           fontWeight: FontWeight.bold,
           fontSize: 12,
         ),
-        selectedItemColor: Colors.blueAccent,
-        unselectedItemColor: Colors.grey,
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.normal,
+          fontSize: 12,
+        ),
+        selectedItemColor: const Color(0xFFF5680E),
+        unselectedItemColor: const Color(0xFFF5680E).withOpacity(0.4),
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.list_alt),

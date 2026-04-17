@@ -10,9 +10,14 @@ class AnalyticsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: const Color(0xFF0B466E),
+        foregroundColor: Colors.white,
         title: const Text(
           "Search & Analytics",
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontFamily: 'Montserrat',
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
       ),

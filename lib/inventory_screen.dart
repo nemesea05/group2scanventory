@@ -540,9 +540,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
         return Scaffold(
           appBar: AppBar(
+            backgroundColor: const Color(0xFF0B466E),
+            foregroundColor: Colors.white,
             title: const Text(
               "Inventory",
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontFamily: 'Montserrat',
+                fontWeight: FontWeight.bold,
+              ),
             ),
             centerTitle: true,
           ),

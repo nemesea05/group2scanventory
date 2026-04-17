@@ -32,11 +32,17 @@ class ProfileScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Profile"),
+        title: const Text(
+          "Profile",
+          style: TextStyle(
+            fontFamily: 'Montserrat',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.black,
+        backgroundColor: const Color(0xFF0B466E),
+        foregroundColor: Colors.white,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('inventory').snapshots(),

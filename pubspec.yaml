@@ -5,7 +5,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.10.8
+  sdk: ^3.10.7
 
 dependencies:
   flutter:
@@ -45,3 +45,11 @@ flutter:
 
   assets:
     - assets/images/scaventory-logo.png
+    - assets/images/scanventory_stroke.png
+
+  fonts:
+    - family: Montserrat
+      fonts:
+        - asset: assets/font/Montserrat-Regular.ttf
+        - asset: assets/font/Montserrat-Bold.ttf
+          weight: 700
